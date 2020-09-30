@@ -76,9 +76,3 @@ The following endpoints are worth noticing:
 
 - `/public`: Simple aggregation of two public API calls from Bitbucket and Github with some field selection.
 - `/splash`: Public endpoint aggregating data from the internal backend
-
-## lets generate some load!
-
-```
-k6 run loadtest/test.js
-```
