@@ -21,7 +21,9 @@ services:
     ports:
       - 3333:3000
     volumes:
-      - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/
+      - ./grafana-config/service-metrics-datasource.yml:/etc/grafana/provisioning/datasources/service-metrics-datasource.yml
+      - ./grafana-config/service-metrics-dashboard.yml:/etc/grafana/provisioning/dashboards/service-metrics-dashboard.yml
+      - ./grafana-config/Gateway-Service-Metrics-Dashboard.json:/var/lib/grafana/dashboards/Gateway-Service-Metrics-Dashboard.json
     env_file:
       - ./monitoring/grafana/config.monitoring
     restart: always    
@@ -39,17 +41,23 @@ services:
     ports:
       - "8000:8080"
 
-  web:
-    build:
-      context: ./web
-    ports:
-      - "3000:3000"
       
   kraken_designer:
     image: devopsfaith/krakendesigner:latest
     ports:
       - "8787:80"
   
+  influxdb:
+    image: influxdb:latest
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=krakend
+      - INFLUXDB_USER=admin
+      - INFLUXDB_USER_PASSWORD=admin
+      - INFLUXDB_ADMIN_USER=sa
+      - INFLUXDB_ADMIN_PASSWORD=sapwd
+
   krakend_ce:
     image: devopsfaith/krakend:1.1.1
     volumes:
@@ -59,24 +67,55 @@ services:
       - "5002:5002"
       - "5003:5003"      
     depends_on:
-      - rabbitmq
       - fake_api
       - jaeger
       - prometheus
-  
-  jwt_revoke:
-    build:
-      context: ./jwt-revoker
-    ports:
-      - "9000:9000"
-    depends_on:
-      - krakend_ce
+      - influxdb
+      - graylog
 
-  rabbitmq:
-    image: "rabbitmq:3-management"
+  # MongoDB: https://hub.docker.com/_/mongo/
+  mongodb:
+    image: mongo:3
+  # Elasticsearch: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/docker.html
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
     ports:
-      - "15672:15672"
-      - "5672:5672"
-#    volumes:
-#      - ./monitoring/rabbitmq-isolated.conf:/etc/rabbitmq/rabbitmq.config
-  
+      - 9200:9200
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=localhost
+      - network.host=0.0.0.0
+      # Disable X-Pack security: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/security-settings.html#general-security-settings
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+  # Graylog: https://hub.docker.com/r/graylog/graylog/
+  graylog:
+    image: graylog/graylog:2.4.0-1
+    environment:
+      # CHANGE ME!
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      # Password: admin
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_WEB_ENDPOINT_URI=http://127.0.0.1:9000/api
+    links:
+      - mongodb:mongo
+      - elasticsearch
+    depends_on:
+      - mongodb
+      - elasticsearch
+    ports:
+      # Graylog web interface and REST API
+      - 9000:9000
+      # Syslog TCP
+      - 514:514
+      # Syslog UDP
+      - 514:514/udp
+      # GELF TCP
+      - 12201:12201
+      # GELF UDP
+      - 12201:12201/udp

@@ -1,5 +1,5 @@
 
-API Gateway Workshop
+KrakenD Example
 ====
 Wellcome, workshop is a demonstration environment that puts together the necessary pieces to get you started with our API Gateway, using an example web application.
 
@@ -7,18 +7,9 @@ API gateway, we have added to the environment both the API (backend) that feeds 
 Additionally, a dashboard with the metrics is also available so you can see your activity.
 
 
-
 ## Services
 The docker-compose starts the following services:
 
-### Web client
-The consumer of the API gateway is a simple Express JS application that interacts with KrakenD to fetch the data. All code is under `web/`.
-
-The client is a Single Page Application using [Auth0](https://auth0.com) to generate JWT tokens.
-
-**You don't need to install any npm locally**, the docker image will download and install the dependencies in the container for you.
-
-Runs on [http://localhost:3000](http://localhost:3000)
 
 ### Backend
 A simple API that provides raw data to the gateway.
@@ -49,20 +40,12 @@ A Prometheus gathers the metrics from api gateway and stores them. Runs on [http
 ### Grafana
 Grafana is dashboarding UI, shows the metrics Runs on [http://localhost:3333](http://localhost:3333)
 
-### RabbitMQ
 
-Runs on [http://localhost:15672](http://localhost:15672)
-
-
-### The JWT revoker
-A simple implementation of a JWT rovoker using the KrakenD remote bloomfilter client.
-
-Runs on [http://localhost:9000](http://localhost:9000)
 
 ### Start the service
 Just:
 
-    docker-compose up
+    docker-compose up -d
 
 ## Development stuff
 
@@ -90,9 +73,7 @@ To reflect the changes restart docker-compose.
 
 The following endpoints are worth noticing:
 
-- `/private/auth0`: Protects and endpoint validating JWT tokens issued by Auth0
-- `/private/custom`: Protects and endpoint validating custom JWT tokens signed with `/token`.
-- `/token`: Signs a token
+
 - `/public`: Simple aggregation of two public API calls from Bitbucket and Github with some field selection.
 - `/splash`: Public endpoint aggregating data from the internal backend
 
